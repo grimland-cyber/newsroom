@@ -1,11 +1,50 @@
-import type { PressRelease } from "./types";
+import type { PressRelease, MediaAsset } from "./types";
+
+// ---------- helpers ----------
+
+function useSupabase(): boolean {
+  return !!process.env.SUPABASE_URL;
+}
+
+interface SupabaseRow {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string | null;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+  is_published: boolean;
+  media_assets: MediaAsset[];
+}
+
+function rowToRelease(row: SupabaseRow): PressRelease {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    content: row.content,
+    excerpt: row.excerpt,
+    published_at: row.published_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    is_published: row.is_published,
+    media_assets: row.media_assets ?? [],
+  };
+}
 
 // ---------- storage backend ----------
 
 async function readDb(): Promise<PressRelease[]> {
-  if (process.env.KV_REST_API_URL) {
-    const { kv } = await import("@vercel/kv");
-    return (await kv.get<PressRelease[]>("releases")) ?? [];
+  if (useSupabase()) {
+    const { supabase } = await import("./supabase/client");
+    const { data, error } = await supabase
+      .from("releases")
+      .select("*")
+      .order("published_at", { ascending: false });
+    if (error) throw error;
+    return (data as SupabaseRow[]).map(rowToRelease);
   }
   const fs = await import("fs");
   const path = await import("path");
@@ -14,12 +53,37 @@ async function readDb(): Promise<PressRelease[]> {
   return JSON.parse(fs.readFileSync(file, "utf-8")) as PressRelease[];
 }
 
-async function writeDb(releases: PressRelease[]): Promise<void> {
-  if (process.env.KV_REST_API_URL) {
-    const { kv } = await import("@vercel/kv");
-    await kv.set("releases", releases);
+async function writeRelease(release: PressRelease): Promise<void> {
+  if (useSupabase()) {
+    const { supabase } = await import("./supabase/client");
+    const { error } = await supabase.from("releases").upsert(release);
+    if (error) throw error;
     return;
   }
+  // local fallback: read-modify-write
+  const all = await readDb();
+  const idx = all.findIndex((r) => r.id === release.id);
+  if (idx >= 0) all[idx] = release;
+  else all.unshift(release);
+  all.sort(
+    (a, b) =>
+      new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+  );
+  await writeLocalDb(all);
+}
+
+async function removeRelease(id: string): Promise<void> {
+  if (useSupabase()) {
+    const { supabase } = await import("./supabase/client");
+    const { error } = await supabase.from("releases").delete().eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const all = await readDb();
+  await writeLocalDb(all.filter((r) => r.id !== id));
+}
+
+async function writeLocalDb(releases: PressRelease[]): Promise<void> {
   const fs = await import("fs");
   const path = await import("path");
   const dir = path.join(process.cwd(), "data");
@@ -58,20 +122,11 @@ export async function getReleaseById(id: string): Promise<PressRelease | null> {
 }
 
 export async function saveRelease(release: PressRelease): Promise<void> {
-  const all = await readDb();
-  const idx = all.findIndex((r) => r.id === release.id);
-  if (idx >= 0) all[idx] = release;
-  else all.unshift(release);
-  all.sort(
-    (a, b) =>
-      new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
-  );
-  await writeDb(all);
+  await writeRelease(release);
 }
 
 export async function deleteRelease(id: string): Promise<void> {
-  const all = await readDb();
-  await writeDb(all.filter((r) => r.id !== id));
+  await removeRelease(id);
 }
 
 export async function slugExists(slug: string, excludeId?: string): Promise<boolean> {

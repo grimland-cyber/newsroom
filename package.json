@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed-kv": "node scripts/seed-kv.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "@tiptap/extension-link": "^3.20.1",
     "@tiptap/extension-placeholder": "^3.20.1",
     "@tiptap/extension-text-align": "^3.20.1",
