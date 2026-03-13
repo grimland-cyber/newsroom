@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --intel-blue: #0068b5;
+  --intel-blue-dark: #004f8c;
+  --bg: #f5f5f3;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  direction: rtl;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* TipTap Editor */
+.tiptap-editor .ProseMirror {
+  outline: none;
+  min-height: 420px;
+  padding: 1.25rem 1rem;
+  line-height: 1.85;
+}
+
+.tiptap-editor .ProseMirror > * + * { margin-top: 0.75em; }
+
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: right;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Press release body */
+.release-body { line-height: 1.85; }
+.release-body > * + * { margin-top: 0.75em; }
+.release-body h1 { font-size: 1.75rem; font-weight: 700; }
+.release-body h2 { font-size: 1.4rem; font-weight: 700; }
+.release-body h3 { font-size: 1.15rem; font-weight: 600; }
+.release-body strong { font-weight: 700; }
+.release-body em { font-style: italic; }
+.release-body u { text-decoration: underline; }
+.release-body ul { list-style: disc; padding-right: 1.5rem; }
+.release-body ol { list-style: decimal; padding-right: 1.5rem; }
+.release-body a { color: var(--intel-blue); text-decoration: underline; }
+.release-body a:hover { color: var(--intel-blue-dark); }
