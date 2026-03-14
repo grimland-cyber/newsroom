@@ -10,8 +10,8 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "חדר החדשות",
-  description: "הודעות לעיתונות",
+  title: "חדר החדשות | Intel Israel",
+  description: "הודעות לעיתונות — Intel Israel Newsroom",
 };
 
 export default function RootLayout({
