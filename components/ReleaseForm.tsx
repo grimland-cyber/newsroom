@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { createRelease, updateRelease } from "@/app/actions/releases";
 import type { PressRelease, MediaAsset } from "@/lib/types";
@@ -30,6 +30,8 @@ export default function ReleaseForm({ initial }: Props) {
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>(
     initial?.media_assets ?? []
   );
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
@@ -39,6 +41,30 @@ export default function ReleaseForm({ initial }: Props) {
 
   function addMediaAsset() {
     setMediaAssets([...mediaAssets, { name: "", url: "" }]);
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(`שגיאה בהעלאת ${file.name}: ${err.error}`);
+          continue;
+        }
+        const data = await res.json();
+        setMediaAssets((prev) => [...prev, { name: data.name, url: data.url }]);
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function updateAsset(index: number, field: keyof MediaAsset, value: string) {
@@ -142,20 +168,39 @@ export default function ReleaseForm({ initial }: Props) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              נכסי מדיה{" "}
-              <span className="text-gray-400 font-normal">(קישורים חיצוניים)</span>
+              נכסי מדיה
             </label>
-            <button
-              type="button"
-              onClick={addMediaAsset}
-              className="text-xs text-[#0068b5] hover:text-[#004f8c] font-medium transition-colors"
-            >
-              + הוסף קישור
-            </button>
+            <div className="flex items-center gap-3">
+              <label
+                className={`text-xs font-medium transition-colors cursor-pointer ${
+                  uploading
+                    ? "text-gray-400 cursor-wait"
+                    : "text-[#0068b5] hover:text-[#004f8c]"
+                }`}
+              >
+                {uploading ? "מעלה..." : "העלה קובץ"}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.pptx,.docx,.xlsx,.zip"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={addMediaAsset}
+                className="text-xs text-[#0068b5] hover:text-[#004f8c] font-medium transition-colors"
+              >
+                + הוסף קישור
+              </button>
+            </div>
           </div>
           {mediaAssets.length === 0 && (
             <p className="text-xs text-gray-400 py-1">
-              לחץ &quot;הוסף קישור&quot; להוספת תמונה, PDF, מצגת וכו&apos;
+              העלה קבצים או הוסף קישורים חיצוניים (תמונות, PDF, מצגות)
             </p>
           )}
           <div className="space-y-2">
