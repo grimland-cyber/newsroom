@@ -12,8 +12,8 @@ export async function login(
   _prev: string,
   formData: FormData
 ): Promise<string> {
-  const password = formData.get("password") as string;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const password = (formData.get("password") as string)?.trim();
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
 
   if (!password || password !== adminPassword) {
     return "סיסמה שגויה";
