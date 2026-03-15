@@ -85,9 +85,14 @@ export default async function ReleasePage({ params }: Props) {
 
         {release.media_assets?.length > 0 && (
           <section className="mt-10 pt-8 border-t border-gray-200">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              נכסי מדיה
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+                נכסי מדיה
+              </h2>
+              <span className="text-xs text-gray-400 font-medium">
+                {release.media_assets.length} קבצים
+              </span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {release.media_assets.map((asset: MediaAsset, index: number) => (
                 <a
@@ -126,6 +131,18 @@ export default async function ReleasePage({ params }: Props) {
           >
             העתק קישור
           </button>
+        </div>
+
+        {/* PR Contact */}
+        <div className="mt-8 p-5 rounded-xl bg-gray-50 border border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-500 mb-3">יצירת קשר לתקשורת</h3>
+          <p className="text-sm text-gray-700 font-medium">דוברות אינטל ישראל</p>
+          <a
+            href="mailto:Intel.Israel.PR@intel.com"
+            className="text-sm text-[#0071c5] hover:text-[#005a9e] transition-colors mt-1 inline-block"
+          >
+            Intel.Israel.PR@intel.com
+          </a>
         </div>
 
         {/* Related news */}

@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { createRelease, updateRelease } from "@/app/actions/releases";
 import type { PressRelease, MediaAsset } from "@/lib/types";
+import { CATEGORIES } from "@/lib/types";
 
 const TiptapEditor = dynamic(() => import("./TiptapEditor"), { ssr: false });
 
@@ -103,6 +104,25 @@ export default function ReleaseForm({ initial }: Props) {
             placeholder="כותרת ההודעה לעיתונות"
             className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0068b5]/30 focus:border-[#0068b5] bg-white"
           />
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            קטגוריה <span className="text-gray-400 font-normal">(אופציונלי)</span>
+          </label>
+          <select
+            name="category"
+            defaultValue={initial?.category ?? ""}
+            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0068b5]/30 focus:border-[#0068b5] bg-white"
+          >
+            <option value="">ללא קטגוריה</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Slug + Date */}

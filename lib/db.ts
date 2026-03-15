@@ -17,6 +17,7 @@ interface SupabaseRow {
   updated_at: string;
   is_published: boolean;
   media_assets: MediaAsset[];
+  category: string | null;
 }
 
 function rowToRelease(row: SupabaseRow): PressRelease {
@@ -31,6 +32,7 @@ function rowToRelease(row: SupabaseRow): PressRelease {
     updated_at: row.updated_at,
     is_published: row.is_published,
     media_assets: row.media_assets ?? [],
+    category: row.category ?? null,
   };
 }
 

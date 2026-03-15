@@ -23,8 +23,9 @@ function parseFormData(formData: FormData) {
         (a) => a.name.trim() && a.url.trim()
       )
     : [];
+  const category = (formData.get("category") as string)?.trim() || null;
 
-  return { title, slug, excerpt, content, publishedAt, isPublished, mediaAssets };
+  return { title, slug, excerpt, content, publishedAt, isPublished, mediaAssets, category };
 }
 
 export async function createRelease(formData: FormData): Promise<void> {
@@ -48,6 +49,7 @@ export async function createRelease(formData: FormData): Promise<void> {
     updated_at: now,
     is_published: data.isPublished,
     media_assets: data.mediaAssets,
+    category: data.category,
   };
 
   await saveRelease(release);
@@ -81,6 +83,7 @@ export async function updateRelease(
     updated_at: new Date().toISOString(),
     is_published: data.isPublished,
     media_assets: data.mediaAssets,
+    category: data.category,
   };
 
   await saveRelease(updated);
