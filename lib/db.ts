@@ -40,13 +40,17 @@ function rowToRelease(row: SupabaseRow): PressRelease {
 
 async function readDb(): Promise<PressRelease[]> {
   if (useSupabase()) {
-    const { supabase } = await import("./supabase/client");
-    const { data, error } = await supabase
-      .from("releases")
-      .select("*")
-      .order("published_at", { ascending: false });
-    if (error) throw error;
-    return (data as SupabaseRow[]).map(rowToRelease);
+    try {
+      const { supabase } = await import("./supabase/client");
+      const { data, error } = await supabase
+        .from("releases")
+        .select("*")
+        .order("published_at", { ascending: false });
+      if (error) throw error;
+      return (data as SupabaseRow[]).map(rowToRelease);
+    } catch (error) {
+      console.error("Supabase read failed; falling back to local JSON:", error);
+    }
   }
   const fs = await import("fs");
   const path = await import("path");
