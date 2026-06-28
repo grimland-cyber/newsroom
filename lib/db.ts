@@ -3,7 +3,7 @@ import type { PressRelease, MediaAsset } from "./types";
 // ---------- helpers ----------
 
 function useSupabase(): boolean {
-  return !!process.env.SUPABASE_URL;
+  return !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
 }
 
 interface SupabaseRow {
