@@ -2,8 +2,14 @@ import type { PressRelease, MediaAsset } from "./types";
 
 // ---------- helpers ----------
 
+const SUPABASE_TABLE_CANDIDATES = ["press_releases", "releases"] as const;
+const DEFAULT_SUPABASE_TABLE = SUPABASE_TABLE_CANDIDATES[0];
+
 function useSupabase(): boolean {
-  return !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
+  return (
+    !!process.env.SUPABASE_URL &&
+    !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+  );
 }
 
 interface SupabaseRow {
@@ -36,22 +42,7 @@ function rowToRelease(row: SupabaseRow): PressRelease {
   };
 }
 
-// ---------- storage backend ----------
-
-async function readDb(): Promise<PressRelease[]> {
-  if (useSupabase()) {
-    try {
-      const { supabase } = await import("./supabase/client");
-      const { data, error } = await supabase
-        .from("releases")
-        .select("*")
-        .order("published_at", { ascending: false });
-      if (error) throw error;
-      return (data as SupabaseRow[]).map(rowToRelease);
-    } catch (error) {
-      console.error("Supabase read failed; falling back to local JSON:", error);
-    }
-  }
+async function readLocalDb(): Promise<PressRelease[]> {
   const fs = await import("fs");
   const path = await import("path");
   const file = path.join(process.cwd(), "data", "releases.json");
@@ -59,11 +50,86 @@ async function readDb(): Promise<PressRelease[]> {
   return JSON.parse(fs.readFileSync(file, "utf-8")) as PressRelease[];
 }
 
+async function getSupabaseTable(
+  supabase: Awaited<typeof import("./supabase/client")>["supabase"]
+): Promise<(typeof SUPABASE_TABLE_CANDIDATES)[number]> {
+  for (const table of SUPABASE_TABLE_CANDIDATES) {
+    const { error } = await supabase.from(table).select("id", { head: true }).limit(1);
+    if (!error) return table;
+  }
+
+  return DEFAULT_SUPABASE_TABLE;
+}
+
+async function seedSupabaseFromLocal(
+  supabase: Awaited<typeof import("./supabase/client")>["supabase"],
+  table: (typeof SUPABASE_TABLE_CANDIDATES)[number]
+): Promise<void> {
+  const localRows = await readLocalDb();
+  if (localRows.length === 0) return;
+
+  const { count, error } = await supabase
+    .from(table)
+    .select("id", { count: "exact", head: true });
+  if (error || (count ?? 0) >= localRows.length) return;
+
+  const { error: seedError } = await supabase
+    .from(table)
+    .upsert(localRows, { onConflict: "id" });
+
+  if (seedError) {
+    console.error("Supabase seed from local JSON failed:", seedError);
+  }
+}
+
+async function upsertRelease(
+  supabase: Awaited<typeof import("./supabase/client")>["supabase"],
+  table: (typeof SUPABASE_TABLE_CANDIDATES)[number],
+  release: PressRelease
+): Promise<void> {
+  const { error } = await supabase.from(table).upsert(release);
+
+  if (!error) return;
+
+  if (/column .*category/i.test(error.message)) {
+    const { category: _category, ...legacyRelease } = release;
+    const { error: legacyError } = await supabase.from(table).upsert(legacyRelease);
+    if (!legacyError) return;
+    throw legacyError;
+  }
+
+  throw error;
+}
+
+// ---------- storage backend ----------
+
+async function readDb(): Promise<PressRelease[]> {
+  if (useSupabase()) {
+    try {
+      const { supabase } = await import("./supabase/client");
+      const table = await getSupabaseTable(supabase);
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .order("published_at", { ascending: false });
+      if (error) throw error;
+      const rows = (data as SupabaseRow[]).map(rowToRelease);
+      // If the table is empty (e.g. not seeded yet) keep the bundled JSON as a
+      // safety net so the public site never renders blank.
+      if (rows.length > 0) return rows;
+    } catch (error) {
+      console.error("Supabase read failed; falling back to local JSON:", error);
+    }
+  }
+  return readLocalDb();
+}
+
 async function writeRelease(release: PressRelease): Promise<void> {
   if (useSupabase()) {
     const { supabase } = await import("./supabase/client");
-    const { error } = await supabase.from("releases").upsert(release);
-    if (error) throw error;
+    const table = await getSupabaseTable(supabase);
+    await seedSupabaseFromLocal(supabase, table);
+    await upsertRelease(supabase, table, release);
     return;
   }
   // local fallback: read-modify-write
@@ -81,7 +147,8 @@ async function writeRelease(release: PressRelease): Promise<void> {
 async function removeRelease(id: string): Promise<void> {
   if (useSupabase()) {
     const { supabase } = await import("./supabase/client");
-    const { error } = await supabase.from("releases").delete().eq("id", id);
+    const table = await getSupabaseTable(supabase);
+    const { error } = await supabase.from(table).delete().eq("id", id);
     if (error) throw error;
     return;
   }

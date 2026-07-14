@@ -7,5 +7,6 @@ export async function GET() {
     hasJwtSecret: !!process.env.JWT_SECRET,
     hasSupabaseUrl: !!process.env.SUPABASE_URL,
     hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+    hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   });
 }

@@ -13,8 +13,12 @@ create table if not exists press_releases (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   is_published  boolean not null default true,
-  media_assets  jsonb not null default '[]'::jsonb
+  media_assets  jsonb not null default '[]'::jsonb,
+  category      text
 );
+
+-- For databases created before the category column existed:
+alter table press_releases add column if not exists category text;
 
 -- Index for fast slug lookups
 create index if not exists press_releases_slug_idx on press_releases (slug);
