@@ -126,14 +126,18 @@ async function readDb(): Promise<PressRelease[]> {
 
 async function writeRelease(release: PressRelease): Promise<void> {
   if (useSupabase()) {
-    const { supabase } = await import("./supabase/client");
-    const table = await getSupabaseTable(supabase);
-    await seedSupabaseFromLocal(supabase, table);
-    await upsertRelease(supabase, table, release);
-    return;
+    try {
+      const { supabase } = await import("./supabase/client");
+      const table = await getSupabaseTable(supabase);
+      await seedSupabaseFromLocal(supabase, table);
+      await upsertRelease(supabase, table, release);
+      return;
+    } catch (error) {
+      console.error("Supabase write failed; falling back to local JSON:", error);
+    }
   }
   // local fallback: read-modify-write
-  const all = await readDb();
+  const all = await readLocalDb();
   const idx = all.findIndex((r) => r.id === release.id);
   if (idx >= 0) all[idx] = release;
   else all.unshift(release);
@@ -146,13 +150,17 @@ async function writeRelease(release: PressRelease): Promise<void> {
 
 async function removeRelease(id: string): Promise<void> {
   if (useSupabase()) {
-    const { supabase } = await import("./supabase/client");
-    const table = await getSupabaseTable(supabase);
-    const { error } = await supabase.from(table).delete().eq("id", id);
-    if (error) throw error;
-    return;
+    try {
+      const { supabase } = await import("./supabase/client");
+      const table = await getSupabaseTable(supabase);
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+      return;
+    } catch (error) {
+      console.error("Supabase delete failed; falling back to local JSON:", error);
+    }
   }
-  const all = await readDb();
+  const all = await readLocalDb();
   await writeLocalDb(all.filter((r) => r.id !== id));
 }
 
