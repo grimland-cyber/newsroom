@@ -107,6 +107,10 @@ async function readDb(): Promise<PressRelease[]> {
   if (useSupabase()) {
     try {
       const { supabase } = await import("./supabase/client");
+      if (!supabase) {
+        console.warn("Supabase client is null; falling back to local JSON");
+        return readLocalDb();
+      }
       const table = await getSupabaseTable(supabase);
       const { data, error } = await supabase
         .from(table)
@@ -128,6 +132,19 @@ async function writeRelease(release: PressRelease): Promise<void> {
   if (useSupabase()) {
     try {
       const { supabase } = await import("./supabase/client");
+      if (!supabase) {
+        console.warn("Supabase client is null; falling back to local JSON");
+        const all = await readLocalDb();
+        const idx = all.findIndex((r) => r.id === release.id);
+        if (idx >= 0) all[idx] = release;
+        else all.unshift(release);
+        all.sort(
+          (a, b) =>
+            new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+        );
+        await writeLocalDb(all);
+        return;
+      }
       const table = await getSupabaseTable(supabase);
       await seedSupabaseFromLocal(supabase, table);
       await upsertRelease(supabase, table, release);
@@ -152,6 +169,12 @@ async function removeRelease(id: string): Promise<void> {
   if (useSupabase()) {
     try {
       const { supabase } = await import("./supabase/client");
+      if (!supabase) {
+        console.warn("Supabase client is null; falling back to local JSON");
+        const all = await readLocalDb();
+        await writeLocalDb(all.filter((r) => r.id !== id));
+        return;
+      }
       const table = await getSupabaseTable(supabase);
       const { error } = await supabase.from(table).delete().eq("id", id);
       if (error) throw error;
