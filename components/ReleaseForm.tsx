@@ -51,16 +51,32 @@ export default function ReleaseForm({ initial }: Props) {
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        if (!res.ok) {
-          const err = await res.json();
-          alert(`שגיאה בהעלאת ${file.name}: ${err.error}`);
-          continue;
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const res = await fetch("/api/upload", { 
+            method: "POST", 
+            body: form,
+          });
+          
+          if (!res.ok) {
+            let errMsg = `HTTP ${res.status}`;
+            try {
+              const err = await res.json();
+              errMsg = err.error || errMsg;
+            } catch {
+              const text = await res.text();
+              errMsg = text || errMsg;
+            }
+            alert(`שגיאה בהעלאת ${file.name}: ${errMsg}`);
+            continue;
+          }
+          
+          const data = await res.json();
+          setMediaAssets((prev) => [...prev, { name: data.name, url: data.url }]);
+        } catch (fileError) {
+          alert(`שגיאה בהעלאת ${file.name}: ${fileError instanceof Error ? fileError.message : "Unknown error"}`);
         }
-        const data = await res.json();
-        setMediaAssets((prev) => [...prev, { name: data.name, url: data.url }]);
       }
     } finally {
       setUploading(false);
