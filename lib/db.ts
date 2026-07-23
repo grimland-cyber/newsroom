@@ -26,16 +26,29 @@ interface SupabaseRow {
   category: string | null;
 }
 
+function normalizeDateString(input: string | null | undefined): string {
+  const candidate = input ?? "";
+  const parsed = new Date(candidate);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+  return new Date().toISOString();
+}
+
 function rowToRelease(row: SupabaseRow): PressRelease {
+  const createdAt = normalizeDateString(row.created_at);
+  const publishedAt = normalizeDateString(row.published_at ?? row.created_at);
+  const updatedAt = normalizeDateString(row.updated_at ?? row.created_at);
+
   return {
     id: row.id,
     title: row.title,
     slug: row.slug,
     content: row.content,
     excerpt: row.excerpt,
-    published_at: row.published_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+    published_at: publishedAt,
+    created_at: createdAt,
+    updated_at: updatedAt,
     is_published: row.is_published,
     media_assets: row.media_assets ?? [],
     category: row.category ?? null,
