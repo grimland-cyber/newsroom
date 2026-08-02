@@ -3,7 +3,12 @@ import { getAllReleases } from "@/lib/db";
 import DeleteButton from "./DeleteButton";
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("he-IL", {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "תאריך לא זמין";
+  }
+
+  return date.toLocaleDateString("he-IL", {
     day: "numeric",
     month: "short",
     year: "numeric",

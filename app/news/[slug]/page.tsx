@@ -10,7 +10,12 @@ interface Props {
 }
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("he-IL", {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "תאריך לא זמין";
+  }
+
+  return date.toLocaleDateString("he-IL", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -19,7 +24,12 @@ function formatDate(dateString: string) {
 }
 
 function formatShortDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("he-IL", {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "תאריך לא זמין";
+  }
+
+  return date.toLocaleDateString("he-IL", {
     day: "numeric",
     month: "long",
     year: "numeric",

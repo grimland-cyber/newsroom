@@ -1,3 +1,11 @@
+Updated todo list
+
+האחרון: **`lib/db.ts`**
+
+1. פתח את `lib/db.ts`, Ctrl+A ומחק.
+2. הדבק:
+
+```ts
 import type { PressRelease, MediaAsset } from "./types";
 
 // ---------- helpers ----------
@@ -250,3 +258,6 @@ export async function slugExists(slug: string, excludeId?: string): Promise<bool
   const all = await readDb();
   return all.some((r) => r.slug === slug && r.id !== excludeId);
 }
+```
+
+תגיד לי כשזה מודבק — ואז נעבור ל-Commit & Push.

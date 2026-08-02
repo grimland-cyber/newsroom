@@ -5,7 +5,12 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("he-IL", {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "תאריך לא זמין";
+  }
+
+  return date.toLocaleDateString("he-IL", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -34,6 +39,7 @@ export default async function HomePage({
   const byYear = new Map<number, typeof rest>();
   for (const r of rest) {
     const year = new Date(r.published_at).getFullYear();
+    if (!Number.isFinite(year)) continue;
     if (!byYear.has(year)) byYear.set(year, []);
     byYear.get(year)!.push(r);
   }
