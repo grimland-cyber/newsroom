@@ -32,7 +32,7 @@ export async function createRelease(formData: FormData): Promise<void> {
   const data = parseFormData(formData);
 
   if (await slugExists(data.slug)) {
-    throw new Error(`כתובת URL "${data.slug}" כבר קיימת`);
+    redirect(`/admin/new?error=${encodeURIComponent(`כתובת URL "${data.slug}" כבר קיימת`)}`);
   }
 
   const now = new Date().toISOString();
@@ -63,12 +63,12 @@ export async function updateRelease(
   formData: FormData
 ): Promise<void> {
   const existing = await getReleaseById(id);
-  if (!existing) throw new Error("הודעה לא נמצאה");
+  if (!existing) redirect(`/admin/dashboard?error=${encodeURIComponent("הודעה לא נמצאה")}`);
 
   const data = parseFormData(formData);
 
   if (await slugExists(data.slug, id)) {
-    throw new Error(`כתובת URL "${data.slug}" כבר קיימת`);
+    redirect(`/admin/edit/${id}?error=${encodeURIComponent(`כתובת URL "${data.slug}" כבר קיימת`)}`);
   }
 
   const updated: PressRelease = {

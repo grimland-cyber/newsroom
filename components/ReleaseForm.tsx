@@ -19,9 +19,10 @@ function slugify(text: string): string {
 
 interface Props {
   initial?: Partial<PressRelease>;
+  error?: string;
 }
 
-export default function ReleaseForm({ initial }: Props) {
+export default function ReleaseForm({ initial, error }: Props) {
   const isEdit = !!initial?.id;
 
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -100,6 +101,11 @@ export default function ReleaseForm({ initial }: Props) {
 
   return (
     <form action={action} className="max-w-3xl">
+      {error && (
+        <div className="mb-5 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       {/* Hidden inputs for client-managed state */}
       <input type="hidden" name="content" value={content} readOnly />
       <input type="hidden" name="isPublished" value={String(isPublished)} readOnly />

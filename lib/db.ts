@@ -1,11 +1,3 @@
-Updated todo list
-
-האחרון: **`lib/db.ts`**
-
-1. פתח את `lib/db.ts`, Ctrl+A ומחק.
-2. הדבק:
-
-```ts
 import type { PressRelease, MediaAsset } from "./types";
 
 // ---------- helpers ----------
@@ -72,7 +64,7 @@ async function readLocalDb(): Promise<PressRelease[]> {
 }
 
 async function getSupabaseTable(
-  supabase: Awaited<typeof import("./supabase/client")>["supabase"]
+  supabase: NonNullable<Awaited<typeof import("./supabase/client")>["supabase"]>
 ): Promise<(typeof SUPABASE_TABLE_CANDIDATES)[number]> {
   for (const table of SUPABASE_TABLE_CANDIDATES) {
     const { error } = await supabase.from(table).select("id", { head: true }).limit(1);
@@ -83,7 +75,7 @@ async function getSupabaseTable(
 }
 
 async function seedSupabaseFromLocal(
-  supabase: Awaited<typeof import("./supabase/client")>["supabase"],
+  supabase: NonNullable<Awaited<typeof import("./supabase/client")>["supabase"]>,
   table: (typeof SUPABASE_TABLE_CANDIDATES)[number]
 ): Promise<void> {
   const localRows = await readLocalDb();
@@ -104,7 +96,7 @@ async function seedSupabaseFromLocal(
 }
 
 async function upsertRelease(
-  supabase: Awaited<typeof import("./supabase/client")>["supabase"],
+  supabase: NonNullable<Awaited<typeof import("./supabase/client")>["supabase"]>,
   table: (typeof SUPABASE_TABLE_CANDIDATES)[number],
   release: PressRelease
 ): Promise<void> {
@@ -258,6 +250,3 @@ export async function slugExists(slug: string, excludeId?: string): Promise<bool
   const all = await readDb();
   return all.some((r) => r.slug === slug && r.id !== excludeId);
 }
-```
-
-תגיד לי כשזה מודבק — ואז נעבור ל-Commit & Push.
