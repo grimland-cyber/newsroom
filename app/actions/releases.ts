@@ -52,7 +52,16 @@ export async function createRelease(formData: FormData): Promise<void> {
     category: data.category,
   };
 
-  await saveRelease(release);
+  try {
+    await saveRelease(release);
+  } catch (saveError) {
+    console.error("createRelease: saveRelease failed", saveError);
+    redirect(
+      `/admin/new?error=${encodeURIComponent(
+        "שמירת ההודעה נכשלה. ודא שחיבור ה-Supabase מוגדר נכון (כתובת, מפתח והרשאות כתיבה לטבלה)."
+      )}`
+    );
+  }
   revalidatePath("/");
   revalidatePath("/admin/dashboard");
   redirect("/admin/dashboard");
@@ -86,7 +95,16 @@ export async function updateRelease(
     category: data.category,
   };
 
-  await saveRelease(updated);
+  try {
+    await saveRelease(updated);
+  } catch (saveError) {
+    console.error("updateRelease: saveRelease failed", saveError);
+    redirect(
+      `/admin/edit/${id}?error=${encodeURIComponent(
+        "שמירת ההודעה נכשלה. ודא שחיבור ה-Supabase מוגדר נכון (כתובת, מפתח והרשאות כתיבה לטבלה)."
+      )}`
+    );
+  }
   revalidatePath("/");
   revalidatePath(`/news/${updated.slug}`);
   revalidatePath("/admin/dashboard");
