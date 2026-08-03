@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 
 export async function GET() {
+  const store = await cookies();
+  const token = store.get(COOKIE_NAME)?.value;
+  const authenticated = token ? await verifySessionToken(token) : false;
+  if (!authenticated) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const base = {
     hasAdminPassword: !!process.env.ADMIN_PASSWORD,
     passwordLength: process.env.ADMIN_PASSWORD?.length ?? 0,
@@ -19,11 +28,8 @@ export async function GET() {
     if (!supabase) {
       supabaseTest = { ok: false, reason: "supabase client is null" };
     } else {
-      const releasesResult = await supabase.from("releases").select("id", { head: true }).limit(1);
-      const pressReleasesResult = await supabase
-        .from("press_releases")
-        .select("id", { head: true })
-        .limit(1);
+      const releasesResult = await supabase.from("releases").select("id").limit(1);
+      const pressReleasesResult = await supabase.from("press_releases").select("id").limit(1);
       supabaseTest = {
         releasesTable: releasesResult.error ? { error: releasesResult.error.message } : "ok",
         pressReleasesTable: pressReleasesResult.error
