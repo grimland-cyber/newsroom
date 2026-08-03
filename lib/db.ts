@@ -2,7 +2,7 @@ import type { PressRelease, MediaAsset } from "./types";
 
 // ---------- helpers ----------
 
-const SUPABASE_TABLE_CANDIDATES = ["press_releases", "releases"] as const;
+const SUPABASE_TABLE_CANDIDATES = ["releases", "press_releases"] as const;
 const DEFAULT_SUPABASE_TABLE = SUPABASE_TABLE_CANDIDATES[0];
 
 function useSupabase(): boolean {
@@ -67,7 +67,9 @@ async function getSupabaseTable(
   supabase: NonNullable<Awaited<typeof import("./supabase/client")>["supabase"]>
 ): Promise<(typeof SUPABASE_TABLE_CANDIDATES)[number]> {
   for (const table of SUPABASE_TABLE_CANDIDATES) {
-    const { error } = await supabase.from(table).select("id", { head: true }).limit(1);
+    // Note: a HEAD-only request (head: true) does not reliably surface a
+    // "table not found" error from PostgREST, so a real select is required.
+    const { error } = await supabase.from(table).select("id").limit(1);
     if (!error) return table;
   }
 
