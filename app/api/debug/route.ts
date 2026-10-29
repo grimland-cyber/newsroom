@@ -12,21 +12,18 @@ export async function GET() {
 
   const base = {
     hasAdminPassword: !!process.env.ADMIN_PASSWORD,
-    passwordLength: process.env.ADMIN_PASSWORD?.length ?? 0,
     hasJwtSecret: !!process.env.JWT_SECRET,
     hasSupabaseUrl: !!process.env.SUPABASE_URL,
-    supabaseUrlPreview: process.env.SUPABASE_URL
-      ? `${process.env.SUPABASE_URL.slice(0, 20)}...${process.env.SUPABASE_URL.slice(-15)}`
-      : null,
     hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
     hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
   let supabaseTest: unknown = "not attempted";
   try {
-    const { supabase } = await import("@/lib/supabase/client");
+    const { getServiceRoleClient } = await import("@/lib/supabase/client");
+    const supabase = getServiceRoleClient();
     if (!supabase) {
-      supabaseTest = { ok: false, reason: "supabase client is null" };
+      supabaseTest = { ok: false, reason: "service role client is null" };
     } else {
       const releasesResult = await supabase.from("releases").select("id").limit(1);
       const pressReleasesResult = await supabase.from("press_releases").select("id").limit(1);

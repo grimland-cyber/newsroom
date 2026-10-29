@@ -1,24 +1,37 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-// Server-side only. Prefer the service_role key so Row Level Security does not
-// block admin writes; fall back to the anon key for read-only environments.
-const supabaseKey =
-	process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+function makeClient(key: string | undefined): SupabaseClient | null {
+  const url = process.env.SUPABASE_URL;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
-export const supabase = 
-	supabaseUrl && supabaseKey
-		? createClient(supabaseUrl, supabaseKey, {
-				auth: { persistSession: false },
-			})
-		: null;
+let serviceClient: SupabaseClient | null | undefined;
+let publicClient: SupabaseClient | null | undefined;
 
-// Throw error only when supabase is actually needed, not at import time
-export function getSupabaseOrThrow() {
-	if (!supabase) {
-		throw new Error(
-			"Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/SUPABASE_ANON_KEY environment variables"
-		);
-	}
-	return supabase;
+/**
+ * Server-side writes (and admin reads of drafts) must use this client.
+ * It never falls back to the anon key. The service role bypasses RLS, so
+ * writes keep working after anon is limited to SELECT on published rows.
+ */
+export function getServiceRoleClient(): SupabaseClient | null {
+  if (serviceClient === undefined) {
+    serviceClient = makeClient(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  }
+  return serviceClient;
+}
+
+/**
+ * Public reads. Prefers the service role when it is configured so a bad or
+ * missing anon key cannot blank the site. Falls back to the anon key.
+ * Public queries always filter is_published = true, which is the same set
+ * anon can read after RLS is limited to published rows.
+ */
+export function getPublicReadClient(): SupabaseClient | null {
+  if (publicClient === undefined) {
+    publicClient = getServiceRoleClient() ?? makeClient(process.env.SUPABASE_ANON_KEY);
+  }
+  return publicClient;
 }
