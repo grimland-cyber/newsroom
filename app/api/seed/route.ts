@@ -4,6 +4,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import { saveRelease } from "@/lib/db";
+import { revalidateAfterReleaseChangeFromRoute } from "@/lib/revalidate-releases";
 import type { PressRelease } from "@/lib/types";
 
 // One-time seeding: copies the bundled data/releases.json into the Supabase
@@ -34,6 +35,14 @@ export async function GET() {
       seeded++;
     } catch (e) {
       errors.push(`${r.slug}: ${(e as Error).message}`);
+    }
+  }
+
+  if (seeded > 0) {
+    try {
+      revalidateAfterReleaseChangeFromRoute(releases.map((release) => release.slug));
+    } catch (error) {
+      console.error("seed: revalidation failed", error);
     }
   }
 

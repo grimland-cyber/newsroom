@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getReleaseBySlug, getPublishedReleases } from "@/lib/db";
+import { getPublishedReleases, getReleaseBySlug } from "@/lib/db";
+import { safeMediaHref, sanitizeReleaseHtml } from "@/lib/release-html";
 import type { MediaAsset } from "@/lib/types";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -36,6 +37,19 @@ function formatShortDate(dateString: string) {
   });
 }
 
+// Literal required by Next. Keep in step with PUBLIC_REVALIDATE_SECONDS.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const releases = await getPublishedReleases();
+    return releases.map((release) => ({ slug: release.slug }));
+  } catch (error) {
+    console.error("generateStaticParams failed:", error);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const release = await getReleaseBySlug(slug);
@@ -48,11 +62,12 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ReleasePage({ params }: Props) {
   const { slug } = await params;
-  const release = await getReleaseBySlug(slug);
+  const [release, allReleases] = await Promise.all([
+    getReleaseBySlug(slug),
+    getPublishedReleases(),
+  ]);
 
   if (!release || !release.is_published) notFound();
-
-  const allReleases = await getPublishedReleases();
   const related = allReleases
     .filter((r) => r.id !== release.id)
     .slice(0, 3);
@@ -90,7 +105,7 @@ export default async function ReleasePage({ params }: Props) {
 
         <div
           className="release-body text-gray-800"
-          dangerouslySetInnerHTML={{ __html: release.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeReleaseHtml(release.content) }}
         />
 
         {release.media_assets?.length > 0 && (
@@ -107,7 +122,7 @@ export default async function ReleasePage({ params }: Props) {
               {release.media_assets.map((asset: MediaAsset, index: number) => (
                 <a
                   key={index}
-                  href={asset.url}
+                  href={safeMediaHref(asset.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3.5 rounded-lg border border-gray-200 bg-white hover:border-[#0071c5] hover:bg-[#e8f4fd] transition-all group"

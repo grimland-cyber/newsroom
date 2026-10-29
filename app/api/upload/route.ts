@@ -1,90 +1,70 @@
-"use server";
-
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { isAdminRequest } from "@/lib/admin-session";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import { inspectUpload } from "@/lib/upload-policy";
 
-function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.warn("Supabase credentials not configured");
-    return null;
-  }
-
-  return createClient(supabaseUrl, supabaseKey);
-}
+const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseClient();
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = getServiceRoleClient();
   if (!supabase) {
-    console.error("Upload service is not configured - missing Supabase credentials");
+    console.error("Upload service is not configured - missing SUPABASE_SERVICE_ROLE_KEY");
     return NextResponse.json(
-      { error: "Upload service is not configured - Supabase credentials missing" },
+      { error: "Upload service is not configured - SUPABASE_SERVICE_ROLE_KEY missing" },
       { status: 503 }
     );
   }
 
-  let formData;
+  let formData: FormData;
   try {
     formData = await request.formData();
-  } catch (e) {
-    console.error("Failed to parse form data:", e);
-    return NextResponse.json(
-      { error: "Failed to parse form data" },
-      { status: 400 }
-    );
+  } catch (error) {
+    console.error("Failed to parse form data:", error);
+    return NextResponse.json({ error: "Failed to parse form data" }, { status: 400 });
   }
 
-  const file = formData.get("file") as File | null;
-
-  if (!file) {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // Limit to 10MB
-  if (file.size > 10 * 1024 * 1024) {
+  if (file.size <= 0 || file.size > MAX_BYTES) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() ?? "bin";
-  const safeName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const decision = inspectUpload(file.name, file.type, bytes);
+  if (!decision.ok) {
+    return NextResponse.json({ error: decision.error }, { status: 400 });
+  }
+
+  const safeName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${decision.extension}`;
   const path = `uploads/${safeName}`;
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const { error, data } = await supabase.storage
-      .from("media")
-      .upload(path, arrayBuffer, {
-        contentType: file.type,
-        upsert: false,
-      });
+    const { error } = await supabase.storage.from("media").upload(path, bytes, {
+      contentType: decision.contentType,
+      upsert: false,
+    });
 
     if (error) {
       console.error(`Supabase upload error for ${file.name}:`, error);
-      return NextResponse.json(
-        { error: `Upload failed: ${error.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: `Upload failed: ${error.message}` }, { status: 500 });
     }
 
-    const { data: urlData } = supabase.storage
-      .from("media")
-      .getPublicUrl(path);
-
-    console.log(`File uploaded successfully: ${file.name} -> ${path}`);
+    const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
 
     return NextResponse.json({
       url: urlData.publicUrl,
       name: file.name,
     });
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(`Upload error for ${file.name}:`, errorMsg);
-    return NextResponse.json(
-      { error: `Upload failed: ${errorMsg}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: `Upload failed: ${errorMsg}` }, { status: 500 });
   }
 }

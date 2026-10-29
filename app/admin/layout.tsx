@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import AdminSignOut from "./AdminSignOut";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {
